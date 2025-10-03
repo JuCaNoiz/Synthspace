@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aural Flux Synth</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Font Awesome para íconos de redes sociales -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Carga de Tone.js para manejo de audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <!-- Configuración de Tailwind para usar la fuente Inter y un esquema de color oscuro/futurista -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-dark': '#000000', /* Fondo negro sólido */
+                        'panel-dark': '#0D1117', 
+                        'neon-glow': '#f472b6', /* Rosa primario */
+                        'neon-accent': '#34d399', /* Verde acento */
+                        'neon-yellow': '#facc15',
+                        'midi-active': '#6366f1',
+                    },
+                    fontFamily: {
+                        // FIX: Aplicamos Space Mono como fuente principal
+                        sans: ['"Space Mono"', 'monospace'], 
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Importamos la fuente Space Mono */
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+        /* Variables y estilos base inspirados en el look retro-tech */
+        :root {
+            --glow-color: #f472b6;
+            --accent-color: #34d399;
+            --dark-background: #000000; /* Fondo negro sólido */
+            --panel-background: #0d1117;
+            --border-color: #2f343a;
+        }
+        
+        body { 
+            /* FIX: Fondo negro sólido */
+            background-color: var(--dark-background); 
+            color: #ffffff; 
+            font-family: 'Space Mono', monospace; /* Aplicamos Space Mono */
+            text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem; 
+        }
+
+        /* FIX: Quitamos negritas por defecto y ponemos color blanco para todos los elementos de control */
+        h1, h2, h3, h4, span, button, select, label { 
+            font-weight: normal !important;
+            color: #ffffff !important;
+        }
+
+        .control-panel { 
+            /* FIX: Fondo semi-transparente sobre negro para el efecto de "flotar" */
+            background-color: rgba(13, 17, 23, 0.9); 
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 0 10px rgba(244, 114, 182, 0.2);
+        }
+        
+        /* Estilo para Títulos y Elementos Importantes */
+        .neon-title {
+            color: var(--glow-color) !important;
+            text-shadow: 0 0 8px var(--glow-color), 0 0 15px rgba(244, 114, 182, 0.5);
+            border-bottom: 2px solid var(--glow-color);
+        }
+
+        /* Títulos de módulos internos */
+        .neon-text {
+             color: var(--accent-color) !important;
+             text-shadow: 0 0 5px var(--accent-color);
+        }
+
+        .key-dial { 
+            width: 150px; 
+            height: 150px; 
+            border: 4px solid var(--glow-color); 
+            background: rgba(13, 17, 23, 0.7); 
+            transition: all 0.5s ease-out; 
+            box-shadow: 0 0 20px var(--glow-color);
+        }
+        .key-text { 
+            color: #fff !important; 
+            text-shadow: 0 0 8px #fff; 
+        }
+        
+        /* Animación de pulsación (Dial) */
+        @keyframes pulse-led {
+            0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 25px currentColor, 0 0 35px currentColor; }
+        }
+        .is-playing .pulse-indicator { animation: pulse-led 1.5s infinite alternate; }
+
+        /* --- Estilo para Faders Verticales --- */
+        input[type=range].vertical-fader {
+            -webkit-appearance: slider-vertical; 
+            writing-mode: bt-lr; 
+            width: 10px; 
+            height: 90px; 
+            margin: 0 8px;
+            cursor: pointer; 
+            background: rgba(47, 52, 58, 0.7); 
+            border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        /* Fader extra alto para el Master Volume */
+        input[type=range].large-fader {
+            height: 120px; 
+        }
+
+        input[type=range].vertical-fader::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px; 
+            height: 14px; 
+            border-radius: 2px;
+            background: var(--glow-color); 
+            cursor: pointer; 
+            box-shadow: 0 0 8px var(--glow-color);
+            border: 1px solid white;
+        }
+        
+        .fader-group.vertical {
+            background-color: rgba(1, 4, 9, 0.7); /* Fondo más transparente */
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+
+        .fader-group.vertical .fader-label-text {
+            color: var(--accent-color) !important;
+            text-shadow: 0 0 3px var(--accent-color);
+        }
+        /* FIX: Ancho fijo para evitar que el texto de valor mueva el control */
+        .fader-group.vertical .fader-value-text {
+            color: #fff !important;
+            text-shadow: 0 0 5px #fff;
+            min-width: 50px; 
+            text-align: center;
+            font-size: 0.75rem; /* Ajuste para texto de valor */
+        }
+        
+        /* Estilo para botones de control */
+        .master-btn {
+            background-color: var(--accent-color);
+            color: var(--dark-background);
+            box-shadow: 0 0 10px var(--accent-color);
+            transition: all 0.1s;
+        }
+        .master-btn:hover {
+            background-color: #6ee7b7; 
+            box-shadow: 0 0 15px var(--accent-color), 0 0 25px rgba(52, 211, 153, 0.5);
+        }
+
+        /* Estilo para el botón MIDI */
+        #midi-status.connected {
+            background-color: #164e63;
+            border-color: #22d3ee;
+            color: #99f6e4;
+            box-shadow: 0 0 10px #22d3ee;
+        }
+        
+        /* Estilo para botones de progresión */
+        .progression-label {
+            color: #ffffff !important; 
+        }
+
+        .social-btn {
+            color: var(--neon-glow);
+            text-shadow: 0 0 5px var(--neon-glow);
+            transition: all 0.2s;
+        }
+        .social-btn:hover {
+            color: #ffffff;
+            text-shadow: 0 0 15px #ffffff;
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen p-4 md:p-8 flex flex-col items-center">
+    <header class="text-center mb-10">
+        <!-- FIX: Header centrado y texto en blanco/neon -->
+        <h1 class="text-3xl md:text-5xl text-white tracking-widest text-center">
+            AURAL FLUX <span class="neon-title text-3xl md:text-5xl ml-1">SYNTH</span>
+        </h1>
+    </header>
+
+    <!-- Módulo Unificado de Emulación -->
+    <main id="control-panel" class="control-panel rounded-lg p-6 md:p-10 w-full max-w-7xl flex flex-col lg:flex-row gap-4">
+        
+        <!-- Columna Izquierda: Tonalidad, Master Vol y Chord Slots -->
+        <div class="lg:w-1/4 w-full space-y-5 p-4 rounded-lg shadow-lg border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
+            <h3 class="text-xl neon-text border-b border-gray-700 pb-2">ENTRADA DE TONO</h3>
+
+             <!-- Indicador de Tonalidad Activa (Dial/Planeta) -->
+            <div id="active-key-dial" class="key-dial mx-auto rounded-full flex flex-col items-center justify-center shadow-2xl pulse-indicator mb-4">
+                <span class="text-slate-400 text-xs">KEY ACTIVA</span>
+                <div class="key-text text-4xl" id="app-key-display">C</div>
+                <div class="text-base text-slate-300" id="app-scale-display">NEUTRAL</div>
+            </div>
+
+            <!-- Controles de Tonalidad (Key/Scale) -->
+            <div class="flex justify-around items-center p-2 rounded-lg shadow-inner" style="background-color: rgba(1, 4, 9, 0.7);">
+                <select id="key-select" class="bg-gray-800 text-white p-2 text-sm rounded-md focus:ring-neon-glow focus:border-neon-glow w-1/2 text-center border-2 border-transparent hover:border-neon-glow">
+                    <!-- Notas se llenarán con JS -->
+                </select>
+                <select id="scale-select" class="bg-gray-800 text-white p-2 text-sm rounded-md focus:ring-neon-glow focus:border-neon-glow w-1/2 text-center ml-2 border-2 border-transparent hover:border-neon-glow">
+                    <option value="Minor">MENOR</option>
+                    <option value="Major">MAYOR</option>
+                    <option value="Neutral">NEUTRAL</option>
+                </select>
+            </div>
+            
+            <!-- Selector de Octava -->
+            <div class="space-y-2 p-2 rounded-lg shadow-inner" style="background-color: rgba(1, 4, 9, 0.7);">
+                <h4 class="text-base text-neon-accent text-center">OCTAVA BASE</h4>
+                <div class="flex justify-center items-center">
+                    <input type="range" id="octave-select" min="1" max="6" value="4" step="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700">
+                </div>
+                <span class="text-white block text-center text-sm" id="octave-label">4</span>
+            </div>
+
+            <hr class="border-gray-700">
+            
+            <!-- FIX: MASTER VOLUMEN (MOVIDO Y HECHO GRANDE) -->
+            <div class="flex flex-col items-center space-y-3">
+                <h4 class="text-xl neon-title border-b border-gray-800 pb-1">MASTER VOL</h4>
+                <div class="fader-group vertical h-32 w-1/2">
+                    <input type="range" id="global-mix-slider" min="-60" max="0" value="-5" step="0.5" class="vertical-fader large-fader"> 
+                    <span class="fader-value-text text-base" id="volume-label">-5.0 dB</span>
+                </div>
+            </div>
+            
+            <hr class="border-gray-700">
+
+            <!-- Control de Progresión (FIX: quita "de notas") -->
+            <div class="space-y-3 p-4 rounded-lg shadow-lg border border-gray-700" style="background-color: rgba(1, 4, 9, 0.7);">
+                <h4 class="text-xl neon-glow border-b border-gray-800 pb-2">PROGRESIÓN</h4>
+                <div id="note-slots" class="grid grid-cols-5 gap-2 text-center text-xs font-mono">
+                    <!-- Slot 0 (Tónica base) -->
+                    <div class="flex flex-col items-center">
+                        <input type="checkbox" id="slot-0" class="w-4 h-4 accent-neon-yellow" checked>
+                        <span class="text-slate-400 mt-1 progression-label text-xs">I</span>
+                    </div>
+                    <!-- Slots 1-4 (Notas relativas) -->
+                    <div class="flex flex-col items-center">
+                        <input type="checkbox" id="slot-1" class="w-4 h-4 accent-neon-glow" data-step="3" checked>
+                        <span class="text-slate-400 mt-1 progression-label text-xs" id="slot-1-label">III</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="checkbox" id="slot-2" class="w-4 h-4 accent-neon-glow" data-step="7" checked>
+                        <span class="text-slate-400 mt-1 progression-label text-xs" id="slot-2-label">V</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="checkbox" id="slot-3" class="w-4 h-4 accent-neon-glow" data-step="12">
+                        <span class="text-slate-400 mt-1 progression-label text-xs" id="slot-3-label">VIII</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="checkbox" id="slot-4" class="w-4 h-4 accent-neon-glow" data-step="16">
+                        <span class="text-slate-400 mt-1 progression-label text-xs" id="slot-4-label">IX</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Activa las notas para crear un acorde.</p>
+            </div>
+        </div>
+
+        <!-- Columna Central: ADSR, Filtro, Tremolo (Faders Verticales) -->
+        <div class="lg:w-1/3 w-full p-4 rounded-lg shadow-lg space-y-5 border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
+            <h3 class="text-xl neon-title border-b border-gray-700 pb-2">SYNTH & MODULATION</h3>
+
+            <!-- Controles ADSR (Faders) -->
+            <div class="space-y-2">
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">ADSR ENVELOPE</h4>
+                <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
+                    <!-- Attack -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">ATTACK</span>
+                        <input type="range" id="adsr-attack" min="0.01" max="5.0" value="2.0" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="adsr-attack-label">2.00 s</span>
+                    </div>
+                    <!-- Decay -->
+                    <div class="fader-group vertical">
+                         <span class="fader-label-text text-xs">DECAY</span>
+                        <input type="range" id="adsr-decay" min="0.01" max="5.0" value="0.5" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="adsr-decay-label">0.50 s</span>
+                    </div>
+                    <!-- Sustain -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">SUSTAIN</span>
+                        <input type="range" id="adsr-sustain" min="0.0" max="1.0" value="0.8" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="adsr-sustain-label">0.80</span>
+                    </div>
+                    <!-- Release -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">RELEASE</span>
+                        <input type="range" id="adsr-release" min="0.1" max="10.0" value="5.0" step="0.1" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="adsr-release-label">5.0 s</span>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Filtro (HP/LP) y Tremolo -->
+            <div class="space-y-3">
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">FILTER & LFO</h4>
+                <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
+                    <!-- Filtro Freq -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">FILT FREQ</span>
+                        <input type="range" id="filter-freq" min="100" max="10000" value="1500" step="10" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="filter-freq-label">1500 Hz</span>
+                    </div>
+                    <!-- Filtro Q -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">RES Q</span>
+                        <input type="range" id="filter-q" min="0.1" max="20" value="1.0" step="0.1" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="filter-q-label">1.0</span>
+                    </div>
+                     <!-- Tremolo Rate -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">LFO RATE</span>
+                        <input type="range" id="tremolo-rate" min="0.1" max="10.0" value="1.0" step="0.1" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="tremolo-rate-label">1.0 Hz</span>
+                    </div>
+                    <!-- Tremolo Depth -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">LFO DEPTH</span>
+                        <input type="range" id="tremolo-depth" min="0.0" max="1.0" value="0.5" step="0.05" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="tremolo-depth-label">0.50</span>
+                    </div>
+                </div>
+                <div class="flex justify-around mt-2 text-xs">
+                    <select id="filter-type" class="w-1/3 bg-gray-800 text-white p-1 text-xs rounded-md text-center border-2 border-transparent hover:border-neon-accent">
+                        <option value="lowpass">LOWPASS</option>
+                        <option value="highpass">HIGHPASS</option>
+                    </select>
+                    <select id="tremolo-type" class="w-1/3 bg-gray-800 text-white p-1 text-xs rounded-md text-center ml-2 border-2 border-transparent hover:border-neon-accent">
+                        <option value="sine">SENO</option>
+                        <option value="square">CUADRADA</option>
+                        <option value="triangle">TRIÁNGULO</option>
+                    </select>
+                    <!-- BOTÓN ON/OFF TREMOLO -->
+                    <button id="tremolo-bypass-btn" class="w-1/3 p-1 text-xs rounded-md ml-2 bg-gray-700 text-white transition duration-150 border border-gray-500 hover:border-white">
+                        TREMOLO OFF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Efectos (EQ, Delay, Reverb) y Arpegiador -->
+        <div class="lg:w-1/3 w-full p-4 rounded-lg shadow-lg space-y-5 border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
+            <h3 class="text-xl neon-title border-b border-gray-700 pb-2">FX & MASTER</h3>
+            
+            <!-- EQ de 3 Bandas (Faders) -->
+            <div class="space-y-2">
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">ECUALIZADOR (EQ3)</h4>
+                <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
+                    <!-- Low -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">LOW</span>
+                        <input type="range" id="eq-low" min="-12" max="12" value="0" step="0.5" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="eq-low-label">0.0 dB</span>
+                    </div>
+                    <!-- Mid -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">MID</span>
+                        <input type="range" id="eq-mid" min="-12" max="12" value="0" step="0.5" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="eq-mid-label">0.0 dB</span>
+                    </div>
+                    <!-- High -->
+                    <div class="fader-group vertical">
+                        <span class="fader-label-text text-xs">HIGH</span>
+                        <input type="range" id="eq-high" min="-12" max="12" value="0" step="0.5" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="eq-high-label">0.0 dB</span>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-700">
+            
+            <!-- Delay / Reverb / Arp Mix -->
+            <div class="space-y-2">
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">SPACE EFFECTS</h4>
+                <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
+                    <!-- Reverb Mix -->
+                    <div class="fader-group vertical w-1/4">
+                        <span class="fader-label-text text-xs">RVB MIX</span>
+                        <input type="range" id="reverb-mix" min="0.0" max="1.0" value="0.3" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="reverb-mix-label">0.30</span>
+                    </div>
+                    <!-- Delay Mix -->
+                    <div class="fader-group vertical w-1/4">
+                        <span class="fader-label-text text-xs">DLY MIX</span>
+                        <input type="range" id="delay-mix" min="0.0" max="1.0" value="0.4" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="delay-mix-label">0.40</span>
+                    </div>
+                    <!-- Delay Feedback -->
+                    <div class="fader-group vertical w-1/4">
+                        <span class="fader-label-text text-xs">DLY FBACK</span>
+                        <input type="range" id="delay-feedback" min="0.0" max="0.9" value="0.6" step="0.05" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="delay-feedback-label">0.60</span>
+                    </div>
+                     <!-- FIX: ARP VOL fader (pequeño) -->
+                    <div class="fader-group vertical w-1/4">
+                        <h4 class="fader-label-text text-xs text-white border-b border-gray-800 pb-1">ARP VOL</h4>
+                        <input type="range" id="arp-mix" min="0.0" max="1.0" value="0.0" step="0.01" class="vertical-fader">
+                        <span class="fader-value-text text-xs" id="arp-mix-label">0.00</span>
+                    </div>
+                </div>
+                <!-- Delay/Reverb Selects (Horizontal) -->
+                <div class="flex justify-between gap-3 mt-2 text-xs">
+                    <select id="delay-type" class="w-1/2 bg-gray-800 text-white p-1 text-xs rounded-md border-2 border-transparent hover:border-neon-glow">
+                        <option value="digital">DLY: DIGITAL</option>
+                        <option value="pingpong">DLY: PING PONG</option>
+                        <option value="analog">DLY: TAPE</option>
+                    </select>
+                    <select id="delay-time" class="w-1/2 bg-gray-800 text-white p-1 text-xs rounded-md ml-2 border-2 border-transparent hover:border-neon-glow">
+                        <option value="4n">TIME: 1/4 NOTA</option>
+                        <option value="8n">TIME: 1/8 NOTA</option>
+                        <option value="8t">TIME: 1/8 TRIPLE</option>
+                        <option value="16n">TIME: 1/16 NOTA</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Arpegiador Rate/Pattern y Master -->
+            <div class="flex justify-between items-center space-x-4">
+                <!-- Arp Controls -->
+                <div class="w-full space-y-2">
+                    <h4 class="text-xl neon-text">ARP CONTROL</h4>
+                    <select id="arp-rate" class="w-full bg-gray-800 text-white p-1 text-xs rounded-md border-2 border-transparent hover:border-neon-accent">
+                        <option value="120">120 BPM</option>
+                        <option value="90">90 BPM</option>
+                        <option value="60">60 BPM</option>
+                    </select>
+                    <select id="arp-pattern" class="w-full bg-gray-800 text-white p-1 text-xs rounded-md border-2 border-transparent hover:border-neon-accent">
+                        <option value="up">UP</option>
+                        <option value="down">DOWN</option>
+                        <option value="upDown">UP/DOWN</option>
+                        <option value="random">RANDOM</option> 
+                    </select>
+                    
+                    <!-- Random Chance Fader -->
+                    <div class="fader-group vertical h-16 w-full">
+                        <span class="fader-label-text !relative top-0 text-xs">CHANCE (%)</span>
+                        <input type="range" id="arp-random-chance" min="0" max="100" value="0" step="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700">
+                        <span class="fader-value-text text-xs" id="arp-random-chance-label">0 %</span>
+                    </div>
+                </div>
+
+                <!-- NOTA: El fader ARP VOL se movió a SPACE EFFECTS -->
+            </div>
+
+            <!-- MIDI Status Indicator -->
+            <div id="midi-status" class="text-center p-2 rounded-lg text-xs bg-gray-900 border border-red-500 text-red-400">
+                MIDI: DESCONECTADO
+            </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Botones de Control Maestro -->
+            <div class="flex space-x-4">
+                 <button id="engage-btn" class="w-1/2 p-4 rounded-lg master-btn transition transform active:scale-98">
+                    <span class="text-base" id="engage-label">ENGAGE (PLAY)</span>
+                </button>
+                <button id="abort-btn" class="w-1/2 p-4 rounded-lg bg-red-800 hover:bg-red-700 text-white shadow-2xl transition transform active:scale-98" style="box-shadow: 0 0 10px rgba(220, 38, 38, 0.7);">
+                    ABORT
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+    
+    <!-- Footer -->
+    <footer class="mt-8 p-4 w-full max-w-7xl text-center text-xs text-gray-500 border-t border-gray-800 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <!-- FIX: Aural Flux color cambiado a blanco para consistencia -->
+            <span class="text-white !text-sm">Aural Flux &copy;</span> 
+            <span class="text-white !text-xs">Desarrollado por JuCa Noiz</span>
+        </div>
+        <div class="flex space-x-4">
+            <a href="https://www.tiktok.com/@juca.noiz" target="_blank" class="social-btn" title="TikTok">
+                <i class="fab fa-tiktok"></i>
+            </a>
+            <a href="https://www.instagram.com/jucanoiz/" target="_blank" class="social-btn" title="Instagram">
+                <i class="fab fa-instagram"></i>
+            </a>
+            <a href="https://www.facebook.com/juca.noiz.2025" target="_blank" class="social-btn" title="Facebook">
+                <i class="fab fa-facebook"></i>
+            </a>
+        </div>
+    </footer>
+
+
+    <script>
+        // --- Setup de Tone.js y variables globales ---
+        let isPlaying = false;
+        let currentSetlistIndex = 0; 
+        let audioContextReady = false;
+        let currentSynth = null; 
+        let arpSynth = null;
+        let arpLoop = null;
+        let arpNotes = [];
+        let currentOctave = 4; // Octava base C4 por defecto
+        
+        // Nodos Globales de FX y Ganancia
+        let arpMixerNode = null;
+        let arpFilter = null; 
+        let rolandChorus = null; 
+
+        let masterGain = null;
+        let tremolo = null;
+        let reverb = null;
+        let delay = null;
+        let pingPongDelay = null;
+        let chorus = null; 
+        let activeDelayNode = null;
+        let eq3 = null;
+        let filter = null;
+
+        const chromaticNotes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        
+        // --- Elementos del DOM y Controles (Abreviado) ---
+        const controlPanel = document.getElementById('control-panel');
+        const engageBtn = document.getElementById('engage-btn');
+        const keySelect = document.getElementById('key-select');
+        const scaleSelect = document.getElementById('scale-select');
+        const octaveSelect = document.getElementById('octave-select');
+        const noteSlots = Array.from(document.querySelectorAll('#note-slots input[type="checkbox"]'));
+        const tremoloBypassBtn = document.getElementById('tremolo-bypass-btn');
+        const midiStatus = document.getElementById('midi-status');
+        
+        // FIX: Master Volume Slider ahora está en la columna izquierda
+        const masterVolumeSlider = document.getElementById('global-mix-slider');
+
+
+        // Agrupación de controles para fácil acceso
+        const adsrControls = { attack: document.getElementById('adsr-attack'), decay: document.getElementById('adsr-decay'), sustain: document.getElementById('adsr-sustain'), release: document.getElementById('adsr-release') };
+        const tremoloControls = { type: document.getElementById('tremolo-type'), rate: document.getElementById('tremolo-rate'), depth: document.getElementById('tremolo-depth') };
+        const filterControls = { type: document.getElementById('filter-type'), freq: document.getElementById('filter-freq'), q: document.getElementById('filter-q') };
+        const eqControls = { low: document.getElementById('eq-low'), mid: document.getElementById('eq-mid'), high: document.getElementById('eq-high') };
+        const reverbControls = { mix: document.getElementById('reverb-mix'), decay: document.getElementById('reverb-decay') };
+        const delayControls = { type: document.getElementById('delay-type'), time: document.getElementById('delay-time'), mix: document.getElementById('delay-mix'), feedback: document.getElementById('delay-feedback') };
+        const arpControls = { rate: document.getElementById('arp-rate'), pattern: document.getElementById('arp-pattern'), mix: document.getElementById('arp-mix'), chance: document.getElementById('arp-random-chance') };
+        
+        // Mapeo MIDI: Asignar CCs comunes a IDs de faders
+        const midiMap = {
+            1: 'global-mix-slider',      // CC 1: Mod Wheel -> Master Vol 
+            20: 'adsr-attack',           // CC 20: Attack
+            21: 'adsr-decay',            // CC 21: Decay
+            22: 'adsr-sustain',          // CC 22: Sustain
+            23: 'adsr-release',          // CC 23: Release
+            24: 'filter-freq',           // CC 24: Filter Freq
+            25: 'filter-q',              // CC 25: Filter Q
+            26: 'tremolo-rate',          // CC 26: Tremolo Rate
+            27: 'tremolo-depth',         // CC 27: Tremolo Depth
+            28: 'delay-mix',             // CC 28: Delay Mix
+            29: 'reverb-mix',            // CC 29: Reverb Mix
+            30: 'eq-mid',                // CC 30: EQ Mid
+            31: 'arp-mix',               // CC 31: ARP Mix
+        };
+
+        // --- Funciones de Utilidad ---
+        
+        /** Actualiza el texto de la etiqueta de un fader. */
+        function updateKnobLabel(id, value, suffix = '') {
+            const targetId = id.endsWith('-label') ? id : id + '-label';
+            const targetLabel = document.getElementById(targetId);
+            if (targetLabel) {
+                 const fixedValue = parseFloat(value).toFixed(Math.abs(value) < 1.0 && value.toString().includes('.') ? 2 : 1);
+                 targetLabel.textContent = `${fixedValue}${suffix}`;
+            }
+        }
+        
+        /** Calcula el set de notas. */
+        function getPadChord(baseNote, scale) {
+            const baseNoteName = baseNote.slice(0, -1);
+            const baseMidi = Tone.Midi(baseNoteName + currentOctave).toMidi();
+            
+            let chordMidi = [];
+            
+            noteSlots.forEach((slot, index) => {
+                if (slot.checked) {
+                    let step = parseInt(slot.dataset.step || 0);
+                    
+                    if (index === 0) {
+                        chordMidi.push(baseMidi);
+                        chordMidi.push(baseMidi - 12); 
+                        chordMidi.push(baseMidi - 24); 
+                    } else {
+                        chordMidi.push(baseMidi + step);
+                    }
+                }
+            });
+            
+            let uniqueMidi = [...new Set(chordMidi)].sort((a, b) => a - b);
+            
+            arpNotes = uniqueMidi
+                .filter(midi => Tone.Midi(midi).toNote().match(/\d/)?.[0] && Tone.Midi(midi).toNote().match(/\d/)?.[0] >= 3)
+                .map(midi => Tone.Midi(midi).toNote());
+            
+            return uniqueMidi.map(midi => Tone.Midi(midi).toNote());
+        }
+
+        // --- Lógica de Audio (Tone.js) ---
+
+        /** Inicializa el Contexto de Audio y la cadena de efectos. */
+        async function initializeAudio() {
+            if (audioContextReady) return;
+            try {
+                await Tone.start();
+                audioContextReady = true;
+                
+                // 0. Transporte
+                Tone.Transport.start();
+                Tone.Transport.bpm.value = parseFloat(arpControls.rate.value);
+
+                // 1. Master Gain (Controlado por global-mix-slider)
+                masterGain = new Tone.Gain(Tone.dbToGain(parseFloat(masterVolumeSlider.value))).toDestination();
+                
+                // Filtros y EQ del PAD principal
+                filter = new Tone.Filter(parseFloat(filterControls.freq.value), filterControls.type.value, -24); 
+                filter.Q.value = parseFloat(filterControls.q.value);
+                eq3 = new Tone.EQ3(eqControls.low.value, eqControls.mid.value, eqControls.high.value);
+                
+                // Tremolo (LFO)
+                tremolo = new Tone.Tremolo({ 
+                    frequency: parseFloat(tremoloControls.rate.value), 
+                    depth: parseFloat(tremoloControls.depth.value), 
+                    type: tremoloControls.type.value, 
+                    wet: 1 
+                }).start();
+                tremolo.wet.value = 0; 
+
+                // Reverb
+                reverb = new Tone.Reverb({ decay: 4.0, preDelay: 0.01 }).connect(masterGain);
+                reverb.wet.value = parseFloat(reverbControls.mix.value);
+                
+                // Chorus estilo Roland 
+                rolandChorus = new Tone.Chorus({
+                    frequency: 1.5,
+                    delayTime: 3.5,
+                    depth: 0.7,
+                    type: "triangle",
+                    spread: 180, 
+                    wet: 0.3 
+                }).connect(masterGain); 
+
+
+                // 2. Delays 
+                delay = new Tone.FeedbackDelay(delayControls.time.value, parseFloat(delayControls.feedback.value)).set({ wet: parseFloat(delayControls.mix.value) });
+                pingPongDelay = new Tone.PingPongDelay(delayControls.time.value, parseFloat(delayControls.feedback.value)).set({ wet: parseFloat(delayControls.mix.value) });
+                chorus = new Tone.Chorus(4, 2.5, 0.5).set({ wet: parseFloat(delayControls.mix.value) }); 
+                activeDelayNode = delay; 
+
+                // 3. Conexión de la cadena del Pad: Tremolo -> Filter -> EQ -> RolandChorus -> Delay -> Reverb -> Master
+                tremolo.chain(filter, eq3, rolandChorus); 
+                rolandChorus.chain(activeDelayNode);
+                activeDelayNode.connect(reverb);
+                
+                // 4. Sintetizador Pad Atmosférico (Polifónico)
+                currentSynth = new Tone.PolySynth(Tone.FMSynth, {
+                    volume: -5,
+                    oscillator: { type: "sine" },
+                    envelope: {
+                        attack: parseFloat(adsrControls.attack.value),
+                        decay: parseFloat(adsrControls.decay.value),
+                        sustain: parseFloat(adsrControls.sustain.value),
+                        release: parseFloat(adsrControls.release.value)
+                    },
+                    modulation: { type: "square" },
+                    modulationEnvelope: { attack: 3, decay: 0.2, sustain: 1, release: 3 }
+                }).connect(tremolo);
+
+                // 5. Sintetizador y Loop de Arpegiador (Stranger Things Vibe)
+                arpFilter = new Tone.Filter(parseFloat(filterControls.freq.value), 'lowpass', -24); 
+                arpFilter.Q.value = parseFloat(filterControls.q.value); 
+                arpMixerNode = new Tone.Gain(parseFloat(arpControls.mix.value)).connect(masterGain);
+                
+                arpSynth = new Tone.Synth({
+                    oscillator: { type: "pulse", width: 0.4 }, 
+                    envelope: { 
+                        attack: parseFloat(adsrControls.attack.value), 
+                        decay: parseFloat(adsrControls.decay.value), 
+                        sustain: parseFloat(adsrControls.sustain.value), 
+                        release: parseFloat(adsrControls.release.value) 
+                    },
+                }).chain(arpFilter, arpMixerNode); 
+                
+                arpLoop = new Tone.Loop(time => {
+                    if (arpNotes.length === 0 || !isPlaying) return;
+                        
+                    const chance = parseFloat(arpControls.chance.value) / 100;
+                    if (chance > 0 && Math.random() > chance) return; 
+
+                    const stepDuration = arpLoop.interval;
+                    const totalSteps = arpNotes.length;
+                    
+                    let noteIndex;
+
+                    if (arpControls.pattern.value === 'random') {
+                        noteIndex = Math.floor(Math.random() * totalSteps);
+                    } else {
+                        let index = Math.floor(Tone.Transport.getSecondsAtTime(time) / Tone.Time(stepDuration).toSeconds());
+                        noteIndex = index % totalSteps;
+
+                        if (arpControls.pattern.value === 'upDown') {
+                            const cycleLength = totalSteps * 2 - 2;
+                            let cycleStep = index % cycleLength;
+                            noteIndex = cycleStep < totalSteps ? cycleStep : cycleLength - cycleStep;
+                        }
+                    }
+                    
+                    arpSynth.triggerAttackRelease(arpNotes[noteIndex % totalSteps], stepDuration, time);
+                }, "8n").start(0);
+
+                setupMidiMapping();
+                applyControlListeners();
+                
+            } catch (error) {
+                console.error("Error al inicializar Tone.js:", error);
+            }
+        }
+
+        /** Inicializa la escucha MIDI. */
+        function setupMidiMapping() {
+            if (!navigator.requestMIDIAccess) {
+                midiStatus.textContent = "MIDI: API NO SOPORTADA";
+                midiStatus.classList.replace('border-red-500', 'border-yellow-500');
+                midiStatus.classList.replace('text-red-400', 'text-yellow-400');
+                return;
+            }
+
+            navigator.requestMIDIAccess()
+                .then(midiAccess => {
+                    const inputs = midiAccess.inputs.values();
+                    let connected = false;
+
+                    for (let input of inputs) {
+                        input.onmidimessage = onMidiMessage;
+                        connected = true;
+                    }
+
+                    if (connected) {
+                        midiStatus.textContent = "MIDI: CONECTADO. CONTROLADORES LISTOS.";
+                        midiStatus.classList.replace('border-red-500', 'border-midi-active');
+                        midiStatus.classList.replace('text-red-400', 'text-neon-accent');
+                        midiStatus.classList.add('connected');
+                    } else {
+                        midiStatus.textContent = "MIDI: DESCONECTADO. (NO HAY DISPOSITIVOS)";
+                        midiStatus.classList.remove('connected');
+                    }
+
+                    midiAccess.onstatechange = () => setupMidiMapping(); 
+                })
+                .catch(e => {
+                    midiStatus.textContent = `MIDI: ERROR DE ACCESO: ${e.message}`;
+                });
+        }
+
+        /** Manejador de mensajes MIDI. */
+        function onMidiMessage(event) {
+            const [status, data1, data2] = event.data;
+            const messageType = status & 0xF0; 
+
+            if (messageType === 0xB0) {
+                const ccNumber = data1;
+                const inputElement = document.getElementById(midiMap[ccNumber]);
+                
+                if (inputElement) {
+                    const min = parseFloat(inputElement.min);
+                    const max = parseFloat(inputElement.max);
+                    const mappedValue = min + (max - min) * (data2 / 127);
+                    
+                    inputElement.value = mappedValue;
+                    inputElement.dispatchEvent(new Event('input'));
+                    
+                    inputElement.style.boxShadow = `0 0 10px 2px var(--midi-active)`;
+                    setTimeout(() => inputElement.style.boxShadow = 'none', 100);
+                }
+            }
+        }
+
+
+        /** Actualiza el set de notas del arpegiador y el BPM. */
+        function updateArpSettings() {
+            if (!arpLoop || !audioContextReady) return;
+            
+            getPadChord(keySelect.value, scaleSelect.value); 
+            
+            Tone.Transport.bpm.value = parseFloat(arpControls.rate.value);
+            
+            const arpMixValue = parseFloat(arpControls.mix.value);
+            if(arpMixerNode){
+                 arpMixerNode.gain.rampTo(arpMixValue, 0.1);
+            }
+            updateKnobLabel('arp-mix', arpMixValue);
+        }
+
+        /** Actualiza el tipo de delay y reconecta. */
+        function updateDelayType(type) {
+            if (!tremolo || !reverb || !filter || !eq3 || !rolandChorus) return;
+            
+            tremolo.disconnect();
+            filter.disconnect();
+            eq3.disconnect();
+            rolandChorus.disconnect();
+            activeDelayNode.disconnect(reverb);
+            
+            switch (type) {
+                case 'pingpong': activeDelayNode = pingPongDelay; break;
+                case 'analog': activeDelayNode = chorus; break;
+                case 'digital': default: activeDelayNode = delay;
+            }
+            
+            tremolo.chain(filter, eq3, rolandChorus);
+            rolandChorus.chain(activeDelayNode);
+            activeDelayNode.connect(reverb);
+            
+            activeDelayNode.wet.value = parseFloat(delayControls.mix.value);
+            if (activeDelayNode.feedback) activeDelayNode.feedback.value = parseFloat(delayControls.feedback.value);
+            if (activeDelayNode.delayTime) activeDelayNode.delayTime.value = delayControls.time.value;
+        }
+
+
+        /** Reproduce o actualiza el pad de manera inmediata. */
+        function playPad(note, scale, forceTrigger = false) {
+            if (!audioContextReady || !currentSynth || !arpSynth) return;
+
+            const notes = getPadChord(note, scale); 
+            updateArpSettings(); 
+            
+            if (notes.length === 0) {
+                 stopPad();
+                 return;
+            }
+
+            const envelopeSettings = {
+                attack: parseFloat(adsrControls.attack.value),
+                decay: parseFloat(adsrControls.decay.value),
+                sustain: parseFloat(adsrControls.sustain.value),
+                release: parseFloat(adsrControls.release.value)
+            };
+            currentSynth.set({ envelope: envelopeSettings });
+            arpSynth.set({ envelope: envelopeSettings }); 
+
+            if (isPlaying && !forceTrigger) {
+                if (currentSynth.activeSources && currentSynth.activeSources.length > 0) { 
+                    currentSynth.releaseAll(Tone.now()); 
+                }
+                currentSynth.triggerAttack(notes, Tone.now());
+                isPlaying = true;
+            } else if (!isPlaying || forceTrigger) {
+                if (currentSynth.activeSources && currentSynth.activeSources.length > 0) { 
+                    currentSynth.releaseAll(Tone.now());
+                }
+                currentSynth.triggerAttack(notes, Tone.now()); 
+                isPlaying = true;
+                updateVisualsPlaying(true);
+            }
+        }
+
+        /** Detiene el pad. */
+        function stopPad() {
+            if (!isPlaying || !currentSynth) return;
+            if (currentSynth.activeSources && currentSynth.activeSources.length > 0) {
+                currentSynth.triggerRelease(currentSynth.activeSources.map(s => s.note), Tone.now());
+            }
+            isPlaying = false;
+            updateVisualsPlaying(false);
+        }
+
+        /** Detiene el pad de forma inmediata (ABORT). */
+        function abortPad() {
+            if (!currentSynth) return;
+            currentSynth.releaseAll(Tone.now()); 
+            isPlaying = false;
+            updateVisualsPlaying(false);
+        }
+        
+        // --- Lógica de Interfaz y Eventos ---
+        
+        /** Inicializa UI y listeners. */
+        function initializeUI() {
+            chromaticNotes.forEach(note => {
+                const opt = document.createElement('option');
+                opt.value = note + '4';
+                opt.textContent = note;
+                keySelect.appendChild(opt);
+            });
+            
+            const initialKey = keySelect.value;
+            const initialScale = scaleSelect.value;
+            updateAppDisplay({ key: initialKey, scale: initialScale, color: 'neon-glow' });
+            document.getElementById('octave-label').textContent = octaveSelect.value;
+
+            document.querySelectorAll('input[type="range"]').forEach(fader => {
+                const id = fader.id;
+                const value = fader.value;
+                let suffix = '';
+                if (id === 'global-mix-slider') {
+                    suffix = ' dB';
+                } else if (id.includes('mix') || id.includes('depth') || id.includes('sustain') || id.includes('feedback') || id.includes('q')) {
+                    suffix = '';
+                } else if (id.includes('rate') || id.includes('freq')) {
+                    suffix = ' Hz';
+                } else if (id.includes('decay') || id.includes('attack') || id.includes('release')) {
+                    suffix = ' s';
+                } else if (id.includes('eq')) {
+                    suffix = ' dB';
+                } else if (id.includes('chance')) {
+                    suffix = ' %';
+                }
+                updateKnobLabel(id, value, suffix);
+            });
+
+            noteSlots.forEach(slot => {
+                slot.addEventListener('change', () => {
+                    updateSlotLabels(keySelect.value, scaleSelect.value);
+                    if (isPlaying) playPad(keySelect.value, scaleSelect.value);
+                });
+            });
+            updateSlotLabels(keySelect.value, scaleSelect.value);
+            
+            tremoloBypassBtn.textContent = 'TREMOLO OFF';
+            tremoloBypassBtn.classList.replace('bg-red-800', 'bg-gray-700');
+            tremoloBypassBtn.classList.remove('bg-slate-500');
+        }
+        
+        /** Actualiza las etiquetas de los slots de notas (ahora en Romanos). */
+        function updateSlotLabels(baseNote, scale) {
+            const isMajor = scale === 'Major';
+            const slotData = [
+                { step: 0, label: 'I' },
+                { step: (isMajor ? 4 : 3), label: 'III' }, 
+                { step: 7, label: 'V' },
+                { step: 12, label: 'VIII' },
+                { step: (isMajor ? 14 : 10), label: (isMajor ? 'IX' : 'VII') },
+            ];
+            
+            slotData.slice(1).forEach((data, index) => {
+                const slotIndex = index + 1;
+                const slotElement = document.getElementById(`slot-${slotIndex}`);
+                const labelElement = document.getElementById(`slot-${slotIndex}-label`);
+                
+                if (slotElement) {
+                    slotElement.dataset.step = data.step;
+                    labelElement.textContent = data.label;
+                }
+            });
+        }
+        
+        /** Actualiza el indicador central de Tonalidad. */
+        function updateAppDisplay(patch) {
+            const note = patch.key.slice(0, -1);
+            const scale = patch.scale;
+
+            document.getElementById('app-key-display').textContent = note;
+            document.getElementById('app-scale-display').textContent = scale.toUpperCase();
+
+            const colorMap = { 'neon-glow': '#f472b6', 'neon-accent': '#34d399', 'neon-yellow': '#facc15' };
+            const colorCode = colorMap[patch.color] || colorMap['neon-glow'];
+
+            document.getElementById('active-key-dial').style.borderColor = colorCode;
+            document.getElementById('active-key-dial').style.color = colorCode;
+        }
+
+        /** Actualiza los indicadores visuales. */
+        function updateVisualsPlaying(playing) {
+            if (playing) {
+                controlPanel.classList.add('is-playing');
+                document.getElementById('engage-label').textContent = 'ENGAGED';
+                engageBtn.style.backgroundColor = 'var(--glow-color)';
+                engageBtn.style.boxShadow = `0 0 15px var(--glow-color)`;
+                Tone.Transport.scheduleOnce(time => Tone.Transport.bpm.value = parseFloat(arpControls.rate.value), 0);
+            } else {
+                controlPanel.classList.remove('is-playing');
+                document.getElementById('engage-label').textContent = 'ENGAGE (PLAY)';
+                engageBtn.style.backgroundColor = 'var(--accent-color)';
+                engageBtn.style.boxShadow = `0 0 10px var(--accent-color)`;
+
+                if (parseFloat(arpControls.mix.value) < 0.01) {
+                    Tone.Transport.scheduleOnce(time => Tone.Transport.bpm.value = 0, 0); 
+                }
+            }
+        }
+
+        /** Aplica todos los listeners a los nuevos controles de síntesis y efectos. */
+        function applyControlListeners() {
+            // 1. Global Mix (Master Volume)
+            masterVolumeSlider.oninput = (e) => {
+                const db = parseFloat(e.target.value);
+                if (masterGain) masterGain.gain.value = Tone.dbToGain(db);
+                updateKnobLabel('volume-label', db, ' dB');
+            };
+
+            // 1.5 Octava Select
+            octaveSelect.addEventListener('input', (e) => {
+                currentOctave = parseInt(e.target.value);
+                document.getElementById('octave-label').textContent = currentOctave;
+                
+                if (isPlaying) playPad(keySelect.value, scaleSelect.value, true); 
+            });
+
+            // 2. ADSR Controls
+            Object.keys(adsrControls).forEach(key => {
+                adsrControls[key].oninput = (e) => {
+                    const value = parseFloat(e.target.value);
+                    
+                    if (currentSynth) currentSynth.set({ envelope: { [key]: value } });
+                    if (arpSynth) arpSynth.set({ envelope: { [key]: value } });
+                    
+                    const suffix = key !== 'sustain' ? ' s' : '';
+                    updateKnobLabel(`adsr-${key}`, value, suffix);
+                    
+                    if (key === 'release' && isPlaying) playPad(keySelect.value, scaleSelect.value);
+                };
+            });
+
+            // 3. Tremolo Controls
+            tremoloControls.rate.oninput = (e) => { if (tremolo) tremolo.frequency.value = parseFloat(e.target.value); updateKnobLabel('tremolo-rate', e.target.value, ' Hz'); };
+            tremoloControls.depth.oninput = (e) => { if (tremolo) tremolo.depth.value = parseFloat(e.target.value); updateKnobLabel('tremolo-depth', e.target.value); };
+            tremoloControls.type.onchange = (e) => { if (tremolo) tremolo.type = e.target.value; };
+            
+            // Tremolo Bypass Button
+            tremoloBypassBtn.onclick = () => {
+                if (!tremolo) return;
+                const isWet = tremolo.wet.value > 0.01;
+                tremolo.wet.value = isWet ? 0.0 : 1.0;
+                tremoloBypassBtn.textContent = isWet ? 'TREMOLO OFF' : 'TREMOLO ON';
+                tremoloBypassBtn.classList.toggle('bg-red-800', !isWet);
+                tremoloBypassBtn.classList.toggle('bg-gray-700', isWet);
+                
+                if (!isWet) {
+                    tremoloBypassBtn.style.boxShadow = `0 0 8px var(--glow-color)`;
+                    tremoloBypassBtn.classList.add('text-neon-glow');
+                } else {
+                    tremoloBypassBtn.style.boxShadow = 'none';
+                    tremoloBypassBtn.classList.remove('text-neon-glow');
+                }
+            };
+
+            // 4. Filter Controls
+            filterControls.type.onchange = (e) => { 
+                if (filter) filter.type = e.target.value; 
+                if (arpFilter) arpFilter.type = e.target.value;
+            };
+            filterControls.freq.oninput = (e) => { 
+                const freq = parseFloat(e.target.value);
+                if (filter) filter.frequency.value = freq;
+                if (arpFilter) arpFilter.frequency.value = freq; 
+                updateKnobLabel('filter-freq', e.target.value, ' Hz'); 
+            };
+            filterControls.q.oninput = (e) => { 
+                const q = parseFloat(e.target.value);
+                if (filter) filter.Q.value = q; 
+                if (arpFilter) arpFilter.Q.value = q; 
+                updateKnobLabel('filter-q', e.target.value); 
+            };
+
+            // 5. EQ Controls
+            eqControls.low.oninput = (e) => { if (eq3) eq3.low.value = parseFloat(e.target.value); updateKnobLabel('eq-low', e.target.value, ' dB'); };
+            eqControls.mid.oninput = (e) => { if (eq3) eq3.mid.value = parseFloat(e.target.value); updateKnobLabel('eq-mid', e.target.value, ' dB'); };
+            eqControls.high.oninput = (e) => { if (eq3) eq3.high.value = parseFloat(e.target.value); updateKnobLabel('eq-high', e.target.value, ' dB'); };
+
+            // 6. Reverb Controls
+            reverbControls.mix.oninput = (e) => { if (reverb) reverb.wet.value = parseFloat(e.target.value); updateKnobLabel('reverb-mix', e.target.value); };
+
+            // 7. Delay Controls
+            delayControls.mix.oninput = (e) => { 
+                if (activeDelayNode) activeDelayNode.wet.value = parseFloat(e.target.value); 
+                updateKnobLabel('delay-mix', e.target.value);
+            };
+            delayControls.feedback.oninput = (e) => { 
+                if (activeDelayNode && activeDelayNode.feedback) activeDelayNode.feedback.value = parseFloat(e.target.value); 
+                updateKnobLabel('delay-feedback', e.target.value);
+            };
+            delayControls.time.onchange = (e) => { 
+                if (activeDelayNode && activeDelayNode.delayTime) activeDelayNode.delayTime.value = e.target.value;
+            };
+            delayControls.type.onchange = (e) => {
+                updateDelayType(e.target.value);
+            };
+            
+            // 8. Arpeggiator Controls
+            arpControls.rate.onchange = (e) => { 
+                Tone.Transport.bpm.value = parseFloat(e.target.value); 
+            };
+            // FIX: arp-mix ahora controla el arpMixerNode (ganancia)
+            arpControls.mix.oninput = (e) => { 
+                if (arpMixerNode) arpMixerNode.gain.rampTo(parseFloat(e.target.value), 0.1);
+                updateKnobLabel('arp-mix', e.target.value);
+                updateVisualsPlaying(isPlaying); 
+            };
+            arpControls.chance.oninput = (e) => { 
+                updateKnobLabel('arp-random-chance', e.target.value, ' %'); 
+            };
+            
+            // 9. Tonalidad y Escala
+            keySelect.addEventListener('change', () => {
+                updateAppDisplay({ key: keySelect.value, scale: scaleSelect.value, color: 'neon-glow' });
+                updateSlotLabels(keySelect.value, scaleSelect.value);
+                if (isPlaying) playPad(keySelect.value, scaleSelect.value);
+            });
+            
+            scaleSelect.addEventListener('change', () => {
+                updateAppDisplay({ key: keySelect.value, scale: scaleSelect.value, color: 'neon-glow' });
+                updateSlotLabels(keySelect.value, scaleSelect.value);
+                if (isPlaying) playPad(keySelect.value, scaleSelect.value);
+            });
+        }
+
+        document.getElementById('engage-btn').addEventListener('click', async () => {
+            if (!audioContextReady) await initializeAudio();
+            if (isPlaying) stopPad();
+            else playPad(keySelect.value, scaleSelect.value, true);
+        });
+        document.getElementById('abort-btn').addEventListener('click', () => abortPad());
+
+        // Inicialización al cargar la ventana
+        window.onload = initializeUI;
+    </script>
+</body>
+</html>
