@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Carga de Tone.js para manejo de audio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-    <!-- Configuración de Tailwind para usar la fuente Inter y un esquema de color oscuro/futurista -->
+    <!-- Configuración de Tailwind para usar la fuente Space Mono -->
     <script>
         tailwind.config = {
             theme: {
@@ -22,9 +22,9 @@
                         'neon-accent': '#34d399', /* Verde acento */
                         'neon-yellow': '#facc15',
                         'midi-active': '#6366f1',
+                        'fader-gray': '#a0aec0', /* Gris claro para el thumb/barra */
                     },
                     fontFamily: {
-                        // FIX: Aplicamos Space Mono como fuente principal
                         sans: ['"Space Mono"', 'monospace'], 
                     },
                 }
@@ -39,45 +39,52 @@
         :root {
             --glow-color: #f472b6;
             --accent-color: #34d399;
-            --dark-background: #000000; /* Fondo negro sólido */
-            --panel-background: #0d1117;
+            --dark-background: #000000; 
             --border-color: #2f343a;
+            --fader-bar-color: #4a5568; /* Gris oscuro para la barra del fader */
         }
         
         body { 
-            /* FIX: Fondo negro sólido */
             background-color: var(--dark-background); 
             color: #ffffff; 
-            font-family: 'Space Mono', monospace; /* Aplicamos Space Mono */
+            font-family: 'Space Mono', monospace; 
             text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
             font-size: 0.8rem; 
         }
 
-        /* FIX: Quitamos negritas por defecto y ponemos color blanco para todos los elementos de control */
+        /* FIX: Todo texto blanco y sin negritas */
         h1, h2, h3, h4, span, button, select, label { 
             font-weight: normal !important;
             color: #ffffff !important;
         }
-
+        
+        /* FIX: Panel principal sin bordes visibles, solo un glow sutil */
         .control-panel { 
-            /* FIX: Fondo semi-transparente sobre negro para el efecto de "flotar" */
             background-color: rgba(13, 17, 23, 0.9); 
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color); 
+            border: none;
             box-shadow: 0 0 10px rgba(244, 114, 182, 0.2);
         }
         
-        /* Estilo para Títulos y Elementos Importantes */
+        /* FIX: Títulos centrados */
+        .module-title {
+            text-align: center !important;
+        }
+        
+        /* FIX: Títulos de sección (neon-title) */
         .neon-title {
+            color: #ffffff !important; /* Título principal blanco, solo el SYNTH brilla */
+            text-shadow: none;
+            border-bottom: none;
+        }
+        .neon-title span {
             color: var(--glow-color) !important;
             text-shadow: 0 0 8px var(--glow-color), 0 0 15px rgba(244, 114, 182, 0.5);
-            border-bottom: 2px solid var(--glow-color);
         }
 
-        /* Títulos de módulos internos */
+        /* FIX: Títulos de módulo (neon-text) */
         .neon-text {
-             color: var(--accent-color) !important;
-             text-shadow: 0 0 5px var(--accent-color);
+             color: #ffffff !important; 
+             text-shadow: none;
         }
 
         .key-dial { 
@@ -93,7 +100,6 @@
             text-shadow: 0 0 8px #fff; 
         }
         
-        /* Animación de pulsación (Dial) */
         @keyframes pulse-led {
             0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
             50% { box-shadow: 0 0 25px currentColor, 0 0 35px currentColor; }
@@ -108,11 +114,10 @@
             height: 90px; 
             margin: 0 8px;
             cursor: pointer; 
-            background: rgba(47, 52, 58, 0.7); 
+            background: var(--fader-bar-color); /* FIX: Barra gris oscuro */
             border-radius: 2px;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
+            box-shadow: none; 
         }
-        /* Fader extra alto para el Master Volume */
         input[type=range].large-fader {
             height: 120px; 
         }
@@ -122,32 +127,31 @@
             width: 24px; 
             height: 14px; 
             border-radius: 2px;
-            background: var(--glow-color); 
+            background: var(--fader-gray); /* FIX: Thumb gris claro */
             cursor: pointer; 
-            box-shadow: 0 0 8px var(--glow-color);
+            box-shadow: 0 0 8px rgba(160, 174, 190, 0.5); 
             border: 1px solid white;
         }
         
-        .fader-group.vertical {
-            background-color: rgba(1, 4, 9, 0.7); /* Fondo más transparente */
-            border: 1px solid var(--border-color);
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
+        /* FIX: Quitamos el contorno de todos los contenedores de faders */
+        .fader-group.vertical,
+        .control-panel > div {
+            background-color: transparent !important; 
+            border: none !important;
+            box-shadow: none !important;
         }
-
         .fader-group.vertical .fader-label-text {
             color: var(--accent-color) !important;
             text-shadow: 0 0 3px var(--accent-color);
         }
-        /* FIX: Ancho fijo para evitar que el texto de valor mueva el control */
         .fader-group.vertical .fader-value-text {
             color: #fff !important;
             text-shadow: 0 0 5px #fff;
             min-width: 50px; 
             text-align: center;
-            font-size: 0.75rem; /* Ajuste para texto de valor */
+            font-size: 0.75rem; 
         }
         
-        /* Estilo para botones de control */
         .master-btn {
             background-color: var(--accent-color);
             color: var(--dark-background);
@@ -159,20 +163,12 @@
             box-shadow: 0 0 15px var(--accent-color), 0 0 25px rgba(52, 211, 153, 0.5);
         }
 
-        /* Estilo para el botón MIDI */
-        #midi-status.connected {
-            background-color: #164e63;
-            border-color: #22d3ee;
-            color: #99f6e4;
-            box-shadow: 0 0 10px #22d3ee;
+        /* FIX: Footer y Redes Sociales */
+        footer {
+            font-size: 0.9rem !important;
         }
-        
-        /* Estilo para botones de progresión */
-        .progression-label {
-            color: #ffffff !important; 
-        }
-
         .social-btn {
+            font-size: 1.5rem; 
             color: var(--neon-glow);
             text-shadow: 0 0 5px var(--neon-glow);
             transition: all 0.2s;
@@ -185,7 +181,6 @@
 </head>
 <body class="font-sans min-h-screen p-4 md:p-8 flex flex-col items-center">
     <header class="text-center mb-10">
-        <!-- FIX: Header centrado y texto en blanco/neon -->
         <h1 class="text-3xl md:text-5xl text-white tracking-widest text-center">
             AURAL FLUX <span class="neon-title text-3xl md:text-5xl ml-1">SYNTH</span>
         </h1>
@@ -195,18 +190,18 @@
     <main id="control-panel" class="control-panel rounded-lg p-6 md:p-10 w-full max-w-7xl flex flex-col lg:flex-row gap-4">
         
         <!-- Columna Izquierda: Tonalidad, Master Vol y Chord Slots -->
-        <div class="lg:w-1/4 w-full space-y-5 p-4 rounded-lg shadow-lg border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
-            <h3 class="text-xl neon-text border-b border-gray-700 pb-2">ENTRADA DE TONO</h3>
+        <div class="lg:w-1/4 w-full space-y-5 p-4 rounded-lg">
+            <h3 class="text-xl neon-text border-b border-gray-700 pb-2 module-title">ENTRADA DE TONO</h3>
 
              <!-- Indicador de Tonalidad Activa (Dial/Planeta) -->
-            <div id="active-key-dial" class="key-dial mx-auto rounded-full flex flex-col items-center justify-center shadow-2xl pulse-indicator mb-4">
+            <div id="active-key-dial" class="key-dial mx-auto rounded-full flex flex-col items-center justify-center pulse-indicator mb-4">
                 <span class="text-slate-400 text-xs">KEY ACTIVA</span>
                 <div class="key-text text-4xl" id="app-key-display">C</div>
                 <div class="text-base text-slate-300" id="app-scale-display">NEUTRAL</div>
             </div>
 
             <!-- Controles de Tonalidad (Key/Scale) -->
-            <div class="flex justify-around items-center p-2 rounded-lg shadow-inner" style="background-color: rgba(1, 4, 9, 0.7);">
+            <div class="flex justify-around items-center p-2 rounded-lg" style="background-color: rgba(1, 4, 9, 0.7);">
                 <select id="key-select" class="bg-gray-800 text-white p-2 text-sm rounded-md focus:ring-neon-glow focus:border-neon-glow w-1/2 text-center border-2 border-transparent hover:border-neon-glow">
                     <!-- Notas se llenarán con JS -->
                 </select>
@@ -217,9 +212,9 @@
                 </select>
             </div>
             
-            <!-- Selector de Octava -->
-            <div class="space-y-2 p-2 rounded-lg shadow-inner" style="background-color: rgba(1, 4, 9, 0.7);">
-                <h4 class="text-base text-neon-accent text-center">OCTAVA BASE</h4>
+            <!-- Selector de Octava PAD -->
+            <div class="space-y-2 p-2 rounded-lg" style="background-color: rgba(1, 4, 9, 0.7);">
+                <h4 class="text-base text-white text-center">OCTAVA BASE</h4>
                 <div class="flex justify-center items-center">
                     <input type="range" id="octave-select" min="1" max="6" value="4" step="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700">
                 </div>
@@ -228,9 +223,9 @@
 
             <hr class="border-gray-700">
             
-            <!-- FIX: MASTER VOLUMEN (MOVIDO Y HECHO GRANDE) -->
+            <!-- MASTER VOLUMEN -->
             <div class="flex flex-col items-center space-y-3">
-                <h4 class="text-xl neon-title border-b border-gray-800 pb-1">MASTER VOL</h4>
+                <h4 class="text-xl neon-title border-b border-gray-800 pb-1 module-title">MASTER VOL</h4>
                 <div class="fader-group vertical h-32 w-1/2">
                     <input type="range" id="global-mix-slider" min="-60" max="0" value="-5" step="0.5" class="vertical-fader large-fader"> 
                     <span class="fader-value-text text-base" id="volume-label">-5.0 dB</span>
@@ -239,9 +234,9 @@
             
             <hr class="border-gray-700">
 
-            <!-- Control de Progresión (FIX: quita "de notas") -->
-            <div class="space-y-3 p-4 rounded-lg shadow-lg border border-gray-700" style="background-color: rgba(1, 4, 9, 0.7);">
-                <h4 class="text-xl neon-glow border-b border-gray-800 pb-2">PROGRESIÓN</h4>
+            <!-- Control de Progresión -->
+            <div class="space-y-3 p-4 rounded-lg" style="background-color: rgba(1, 4, 9, 0.7);">
+                <h4 class="text-xl neon-glow border-b border-gray-800 pb-2 module-title">PROGRESIÓN</h4>
                 <div id="note-slots" class="grid grid-cols-5 gap-2 text-center text-xs font-mono">
                     <!-- Slot 0 (Tónica base) -->
                     <div class="flex flex-col items-center">
@@ -271,12 +266,12 @@
         </div>
 
         <!-- Columna Central: ADSR, Filtro, Tremolo (Faders Verticales) -->
-        <div class="lg:w-1/3 w-full p-4 rounded-lg shadow-lg space-y-5 border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
-            <h3 class="text-xl neon-title border-b border-gray-700 pb-2">SYNTH & MODULATION</h3>
+        <div class="lg:w-1/3 w-full space-y-5 p-4 rounded-lg">
+            <h3 class="text-xl neon-title border-b border-gray-700 pb-2 module-title">SYNTH & MODULATION</h3>
 
             <!-- Controles ADSR (Faders) -->
             <div class="space-y-2">
-                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">ADSR ENVELOPE</h4>
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1 module-title">ADSR ENVELOPE</h4>
                 <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
                     <!-- Attack -->
                     <div class="fader-group vertical">
@@ -309,7 +304,7 @@
 
             <!-- Filtro (HP/LP) y Tremolo -->
             <div class="space-y-3">
-                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">FILTER & LFO</h4>
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1 module-title">FILTER & LFO</h4>
                 <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
                     <!-- Filtro Freq -->
                     <div class="fader-group vertical">
@@ -355,12 +350,12 @@
         </div>
 
         <!-- Columna Derecha: Efectos (EQ, Delay, Reverb) y Arpegiador -->
-        <div class="lg:w-1/3 w-full p-4 rounded-lg shadow-lg space-y-5 border border-gray-700" style="background-color: rgba(13, 17, 23, 0.7);">
-            <h3 class="text-xl neon-title border-b border-gray-700 pb-2">FX & MASTER</h3>
+        <div class="lg:w-1/3 w-full space-y-5 p-4 rounded-lg">
+            <h3 class="text-xl neon-title border-b border-gray-700 pb-2 module-title">FX & ARP</h3>
             
             <!-- EQ de 3 Bandas (Faders) -->
             <div class="space-y-2">
-                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">ECUALIZADOR (EQ3)</h4>
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1 module-title">ECUALIZADOR</h4>
                 <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
                     <!-- Low -->
                     <div class="fader-group vertical">
@@ -387,7 +382,7 @@
             
             <!-- Delay / Reverb / Arp Mix -->
             <div class="space-y-2">
-                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1">SPACE EFFECTS</h4>
+                <h4 class="text-lg text-white text-center border-b border-gray-800 pb-1 module-title">SPACE EFFECTS</h4>
                 <div class="flex justify-around items-end p-2 rounded-lg" style="background-color: rgba(13, 17, 23, 0.9);">
                     <!-- Reverb Mix -->
                     <div class="fader-group vertical w-1/4">
@@ -407,7 +402,7 @@
                         <input type="range" id="delay-feedback" min="0.0" max="0.9" value="0.6" step="0.05" class="vertical-fader">
                         <span class="fader-value-text text-xs" id="delay-feedback-label">0.60</span>
                     </div>
-                     <!-- FIX: ARP VOL fader (pequeño) -->
+                     <!-- ARP VOL fader (pequeño) -->
                     <div class="fader-group vertical w-1/4">
                         <h4 class="fader-label-text text-xs text-white border-b border-gray-800 pb-1">ARP VOL</h4>
                         <input type="range" id="arp-mix" min="0.0" max="1.0" value="0.0" step="0.01" class="vertical-fader">
@@ -436,7 +431,16 @@
             <div class="flex justify-between items-center space-x-4">
                 <!-- Arp Controls -->
                 <div class="w-full space-y-2">
-                    <h4 class="text-xl neon-text">ARP CONTROL</h4>
+                    <h4 class="text-xl neon-text module-title">ARP CONTROL</h4>
+                     <!-- Selector de Octava ARP -->
+                    <div class="space-y-2 p-1 rounded-lg" style="background-color: rgba(1, 4, 9, 0.7);">
+                        <h4 class="text-base text-white text-center">ARP OCTAVA</h4>
+                        <div class="flex justify-center items-center">
+                            <input type="range" id="arp-octave-select" min="-2" max="2" value="0" step="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700">
+                        </div>
+                        <span class="text-white block text-center text-sm" id="arp-octave-label">0</span>
+                    </div>
+
                     <select id="arp-rate" class="w-full bg-gray-800 text-white p-1 text-xs rounded-md border-2 border-transparent hover:border-neon-accent">
                         <option value="120">120 BPM</option>
                         <option value="90">90 BPM</option>
@@ -456,8 +460,6 @@
                         <span class="fader-value-text text-xs" id="arp-random-chance-label">0 %</span>
                     </div>
                 </div>
-
-                <!-- NOTA: El fader ARP VOL se movió a SPACE EFFECTS -->
             </div>
 
             <!-- MIDI Status Indicator -->
@@ -484,9 +486,8 @@
     <!-- Footer -->
     <footer class="mt-8 p-4 w-full max-w-7xl text-center text-xs text-gray-500 border-t border-gray-800 flex justify-between items-center">
         <div class="flex items-center space-x-4">
-            <!-- FIX: Aural Flux color cambiado a blanco para consistencia -->
             <span class="text-white !text-sm">Aural Flux &copy;</span> 
-            <span class="text-white !text-xs">Desarrollado por JuCa Noiz</span>
+            <span class="text-white !text-sm">Desarrollado por JuCa Noiz</span>
         </div>
         <div class="flex space-x-4">
             <a href="https://www.tiktok.com/@juca.noiz" target="_blank" class="social-btn" title="TikTok">
@@ -505,18 +506,19 @@
     <script>
         // --- Setup de Tone.js y variables globales ---
         let isPlaying = false;
-        let currentSetlistIndex = 0; 
         let audioContextReady = false;
         let currentSynth = null; 
         let arpSynth = null;
         let arpLoop = null;
         let arpNotes = [];
-        let currentOctave = 4; // Octava base C4 por defecto
+        let currentPadOctave = 4; // Octava base del Pad
+        let currentArpOctaveShift = 0; // Desplazamiento de octava del Arp
         
         // Nodos Globales de FX y Ganancia
         let arpMixerNode = null;
         let arpFilter = null; 
         let rolandChorus = null; 
+        let lpFilterPad = null; 
 
         let masterGain = null;
         let tremolo = null;
@@ -535,12 +537,12 @@
         const engageBtn = document.getElementById('engage-btn');
         const keySelect = document.getElementById('key-select');
         const scaleSelect = document.getElementById('scale-select');
-        const octaveSelect = document.getElementById('octave-select');
+        const octaveSelect = document.getElementById('octave-select'); // Pad Octave
+        const arpOctaveSelect = document.getElementById('arp-octave-select'); // Arp Octave
         const noteSlots = Array.from(document.querySelectorAll('#note-slots input[type="checkbox"]'));
         const tremoloBypassBtn = document.getElementById('tremolo-bypass-btn');
         const midiStatus = document.getElementById('midi-status');
         
-        // FIX: Master Volume Slider ahora está en la columna izquierda
         const masterVolumeSlider = document.getElementById('global-mix-slider');
 
 
@@ -585,7 +587,8 @@
         /** Calcula el set de notas. */
         function getPadChord(baseNote, scale) {
             const baseNoteName = baseNote.slice(0, -1);
-            const baseMidi = Tone.Midi(baseNoteName + currentOctave).toMidi();
+            // Usamos la octava del PAD para la nota base
+            const baseMidi = Tone.Midi(baseNoteName + currentPadOctave).toMidi();
             
             let chordMidi = [];
             
@@ -594,6 +597,7 @@
                     let step = parseInt(slot.dataset.step || 0);
                     
                     if (index === 0) {
+                        // Tónica y las dos octavas inferiores
                         chordMidi.push(baseMidi);
                         chordMidi.push(baseMidi - 12); 
                         chordMidi.push(baseMidi - 24); 
@@ -605,9 +609,10 @@
             
             let uniqueMidi = [...new Set(chordMidi)].sort((a, b) => a - b);
             
+            // Arp Notes: Aplicamos el desplazamiento de octava (currentArpOctaveShift * 12 semitonos)
             arpNotes = uniqueMidi
                 .filter(midi => Tone.Midi(midi).toNote().match(/\d/)?.[0] && Tone.Midi(midi).toNote().match(/\d/)?.[0] >= 3)
-                .map(midi => Tone.Midi(midi).toNote());
+                .map(midi => Tone.Midi(midi + (currentArpOctaveShift * 12)).toNote());
             
             return uniqueMidi.map(midi => Tone.Midi(midi).toNote());
         }
@@ -618,6 +623,7 @@
         async function initializeAudio() {
             if (audioContextReady) return;
             try {
+                // FIX: Iniciar el contexto de audio en el primer gesto del usuario
                 await Tone.start();
                 audioContextReady = true;
                 
@@ -625,9 +631,12 @@
                 Tone.Transport.start();
                 Tone.Transport.bpm.value = parseFloat(arpControls.rate.value);
 
-                // 1. Master Gain (Controlado por global-mix-slider)
+                // 1. Master Gain 
                 masterGain = new Tone.Gain(Tone.dbToGain(parseFloat(masterVolumeSlider.value))).toDestination();
                 
+                // FIX: HPF Sutil para limpiar ruido de sub-bajos del PAD
+                lpFilterPad = new Tone.Filter(30, 'highpass').connect(masterGain); 
+
                 // Filtros y EQ del PAD principal
                 filter = new Tone.Filter(parseFloat(filterControls.freq.value), filterControls.type.value, -24); 
                 filter.Q.value = parseFloat(filterControls.q.value);
@@ -643,7 +652,7 @@
                 tremolo.wet.value = 0; 
 
                 // Reverb
-                reverb = new Tone.Reverb({ decay: 4.0, preDelay: 0.01 }).connect(masterGain);
+                reverb = new Tone.Reverb({ decay: 4.0, preDelay: 0.01 }).connect(lpFilterPad); 
                 reverb.wet.value = parseFloat(reverbControls.mix.value);
                 
                 // Chorus estilo Roland 
@@ -654,7 +663,7 @@
                     type: "triangle",
                     spread: 180, 
                     wet: 0.3 
-                }).connect(masterGain); 
+                }).connect(lpFilterPad); 
 
 
                 // 2. Delays 
@@ -663,14 +672,14 @@
                 chorus = new Tone.Chorus(4, 2.5, 0.5).set({ wet: parseFloat(delayControls.mix.value) }); 
                 activeDelayNode = delay; 
 
-                // 3. Conexión de la cadena del Pad: Tremolo -> Filter -> EQ -> RolandChorus -> Delay -> Reverb -> Master
+                // 3. Conexión de la cadena del Pad: Tremolo -> Filter -> EQ -> RolandChorus -> Delay -> Reverb -> HPF -> Master
                 tremolo.chain(filter, eq3, rolandChorus); 
                 rolandChorus.chain(activeDelayNode);
                 activeDelayNode.connect(reverb);
                 
                 // 4. Sintetizador Pad Atmosférico (Polifónico)
                 currentSynth = new Tone.PolySynth(Tone.FMSynth, {
-                    volume: -5,
+                    volume: -10, // Bajamos un poco más la ganancia inicial del sinte
                     oscillator: { type: "sine" },
                     envelope: {
                         attack: parseFloat(adsrControls.attack.value),
@@ -685,7 +694,7 @@
                 // 5. Sintetizador y Loop de Arpegiador (Stranger Things Vibe)
                 arpFilter = new Tone.Filter(parseFloat(filterControls.freq.value), 'lowpass', -24); 
                 arpFilter.Q.value = parseFloat(filterControls.q.value); 
-                arpMixerNode = new Tone.Gain(parseFloat(arpControls.mix.value)).connect(masterGain);
+                arpMixerNode = new Tone.Gain(parseFloat(arpControls.mix.value)).connect(lpFilterPad); // Conectado a HPF antes de Master
                 
                 arpSynth = new Tone.Synth({
                     oscillator: { type: "pulse", width: 0.4 }, 
@@ -902,13 +911,17 @@
             const initialKey = keySelect.value;
             const initialScale = scaleSelect.value;
             updateAppDisplay({ key: initialKey, scale: initialScale, color: 'neon-glow' });
+            
+            // Inicializar las etiquetas de las octavas
             document.getElementById('octave-label').textContent = octaveSelect.value;
+            document.getElementById('arp-octave-label').textContent = arpOctaveSelect.value;
+
 
             document.querySelectorAll('input[type="range"]').forEach(fader => {
                 const id = fader.id;
                 const value = fader.value;
                 let suffix = '';
-                if (id === 'global-mix-slider') {
+                if (id === 'global-mix-slider' || id.includes('eq')) {
                     suffix = ' dB';
                 } else if (id.includes('mix') || id.includes('depth') || id.includes('sustain') || id.includes('feedback') || id.includes('q')) {
                     suffix = '';
@@ -916,8 +929,6 @@
                     suffix = ' Hz';
                 } else if (id.includes('decay') || id.includes('attack') || id.includes('release')) {
                     suffix = ' s';
-                } else if (id.includes('eq')) {
-                    suffix = ' dB';
                 } else if (id.includes('chance')) {
                     suffix = ' %';
                 }
@@ -1004,13 +1015,22 @@
                 updateKnobLabel('volume-label', db, ' dB');
             };
 
-            // 1.5 Octava Select
+            // 1.5 Octava Select PAD
             octaveSelect.addEventListener('input', (e) => {
-                currentOctave = parseInt(e.target.value);
-                document.getElementById('octave-label').textContent = currentOctave;
+                currentPadOctave = parseInt(e.target.value);
+                document.getElementById('octave-label').textContent = currentPadOctave;
                 
                 if (isPlaying) playPad(keySelect.value, scaleSelect.value, true); 
             });
+            
+            // 1.6 Octava Select ARP
+            arpOctaveSelect.addEventListener('input', (e) => {
+                currentArpOctaveShift = parseInt(e.target.value);
+                document.getElementById('arp-octave-label').textContent = currentArpOctaveShift;
+                
+                if (isPlaying) playPad(keySelect.value, scaleSelect.value, true); 
+            });
+
 
             // 2. ADSR Controls
             Object.keys(adsrControls).forEach(key => {
@@ -1121,6 +1141,7 @@
         }
 
         document.getElementById('engage-btn').addEventListener('click', async () => {
+            // FIX: Llamar a initializeAudio (que contiene Tone.start()) siempre en el click
             if (!audioContextReady) await initializeAudio();
             if (isPlaying) stopPad();
             else playPad(keySelect.value, scaleSelect.value, true);
